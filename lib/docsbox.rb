@@ -21,6 +21,8 @@ module DocsBox
 
             @errors = valid_payload?
 
+            puts "Payload validation returned #{@errors.size} errors"
+
             if @errors.size > 0
                 @errors[:operation_failed] = "Can't sort with an invalid payload. Blob(s) and attachment(s) are still associated to parent record."
                 return @errors
@@ -33,7 +35,9 @@ module DocsBox
         private
         def sort_docs
             @errors = {}
-            @from_attr.attachments[-@params[@split_from.class.name.downcase.to_sym].values[0].count..-1].each do |new|
+            puts "Sorting docs..."
+
+            @from_attr.attachments[-@params[@split_from.class.name.underscore.to_sym].values[0].count..-1].each do |new|
                 puts "THIS ATTACHMENT: #{new.inspect}"
 
                 # Initialise the required_columns array
@@ -149,7 +153,7 @@ module DocsBox
 
         def types_match(user_data, column)
         
-            user_data.class.to_s.downcase.to_sym == column.type
+            user_data.class.to_s.underscore.to_sym == column.type
         
         end
     end
