@@ -2,12 +2,22 @@ module DocsBox
     class SortNew
         def initialize(split_from, from_attr, split_into, into_attr, params, record_data)
 
+            puts "Initializing DocsBox::SortNew"
+
             @split_from = split_from
             @from_attr = from_attr
             @split_into = split_into
             @into_attr = into_attr
             @params = params
             @record_data = record_data
+
+            puts "Variables initialized:"
+            puts "@split_from: #{@split_from}"
+            puts "@from_attr: #{@from_attr}"
+            puts "@split_into: #{@split_into}"
+            puts "@into_attr: #{@into_attr}"
+            puts "@params: #{@params}"
+            puts "@record_data: #{@record_data}"
 
             @errors = valid_payload?
 
@@ -23,7 +33,7 @@ module DocsBox
         private
         def sort_docs
             @errors = {}
-            @from_attr.attachments[-@params[@split_from.class.name.underscore.to_sym].values[0].count..-1].each do |new|
+            @from_attr.attachments[-@params[@split_from.class.name.downcase.to_sym].values[0].count..-1].each do |new|
                 puts "THIS ATTACHMENT: #{new.inspect}"
 
                 # Initialise the required_columns array
@@ -101,35 +111,45 @@ module DocsBox
 
         def valid_payload?
 
+            puts "Validating Payload..."
+
             @errors = {}
 
+            puts "Validating @split_from..."
             unless @split_from.present? && @split_from.class < ApplicationRecord
                 msg = "You must provide an instance variable of an ApplicationRecord as the first argument (e.g. @box)"
                 @errors.merge({"payload-validation-error": msg})
             end
+            puts "@split_from validation complete. Errors: #{@errors}"
 
+            puts "Validating @from_attr..."
             unless @from_attr.present? && @from_attr.class == ActiveStorage::Attached::Many
                 msg = "You must provide an ActiveStorage::Attached::Many as the second argument (e.g. @box.doc_files)"
                 @errors.merge({"payload-validation-error": msg})
             end
+            puts "@from_attr validation complete. Errors: #{@errors}"
 
+            puts "Validating @split_into..."
             unless @split_into.present? && @split_into < ApplicationRecord
                 msg = "You must provide a valid model (ApplicationRecord) as the third argument (e.g. Doc)"
                 @errors.merge({"payload-validation-error": msg})
             end
+            puts "@split_into validation complete. Errors: #{@errors}"
 
+            puts "Validating @params..."
             unless @params.present? && @params.class == ActionController::Parameters
                 msg = "You must pass your ActionController::Parameters through as the final argument"
                 @errors.merge({"payload-validation-error": msg})
             end
+            puts "@params validation complete. Errors: #{@errors}"
 
-            return @errors
+            @errors
 
         end
 
         def types_match(user_data, column)
         
-            user_data.class.to_s.underscore.to_sym == column.type
+            user_data.class.to_s.downcase.to_sym == column.type
         
         end
     end
