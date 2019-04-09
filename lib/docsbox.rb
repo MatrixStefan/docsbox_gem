@@ -37,6 +37,21 @@ module DocsBox
             @errors = {}
             puts "Sorting docs..."
 
+            puts "@split_from: #{@split_from}"
+            puts "@from_attr: #{@from_attr}"
+            puts "@split_into: #{@split_into}"
+            puts "@into_attr: #{@into_attr}"
+            puts "@params: #{@params}"
+            puts "@record_data: #{@record_data}"
+
+            puts "@from_attr.attachments: #{@from_attr.attachments}"
+            puts "@split_from.class.name.underscore.to_sym: #{@split_from.class.name.underscore.to_sym}"
+            puts "@params[@split_from.class.name.underscore.to_sym]: #{@params[@split_from.class.name.underscore.to_sym]}"
+            puts "@params[@split_from.class.name.underscore.to_sym].values: #{@params[@split_from.class.name.underscore.to_sym].values}"
+            puts "@params[@split_from.class.name.underscore.to_sym].values[0]: #{@params[@split_from.class.name.underscore.to_sym].values[0]}"
+            puts "@params[@split_from.class.name.underscore.to_sym].values[0].count: #{@params[@split_from.class.name.underscore.to_sym].values[0].count}"
+            puts "@from_attr.attachments[-@params[@split_from.class.name.underscore.to_sym].values[0].count..-1]: #{@from_attr.attachments[-@params[@split_from.class.name.underscore.to_sym].values[0].count..-1]}"
+
             @from_attr.attachments[-@params[@split_from.class.name.underscore.to_sym].values[0].count..-1].each do |new|
                 puts "THIS ATTACHMENT: #{new.inspect}"
 
