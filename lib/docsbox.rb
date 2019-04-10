@@ -2,8 +2,6 @@ module DocsBox
     class SortNew
         def initialize(split_from, from_attr, split_into, into_attr, params, record_data)
 
-            puts "Initializing DocsBox::SortNew"
-
             @split_from = split_from
             @from_attr = from_attr
             @split_into = split_into
@@ -11,17 +9,7 @@ module DocsBox
             @params = params
             @record_data = record_data
 
-            puts "Variables initialized:"
-            puts "@split_from: #{@split_from}"
-            puts "@from_attr: #{@from_attr}"
-            puts "@split_into: #{@split_into}"
-            puts "@into_attr: #{@into_attr}"
-            puts "@params: #{@params}"
-            puts "@record_data: #{@record_data}"
-
             @errors = valid_payload?
-
-            puts "Payload validation returned #{@errors.size} errors"
 
             if @errors.size > 0
                 @errors[:operation_failed] = "Can't sort with an invalid payload. Blob(s) and attachment(s) are still associated to parent record."
@@ -35,45 +23,25 @@ module DocsBox
         private
         def sort_docs
             @errors = {}
-            puts "Sorting docs..."
-
-            puts "@split_from: #{@split_from}"
-            puts "@from_attr: #{@from_attr}"
-            puts "@split_into: #{@split_into}"
-            puts "@into_attr: #{@into_attr}"
-            puts "@params: #{@params}"
-            puts "@record_data: #{@record_data}"
-
-            puts "@from_attr.attachments: #{@from_attr.attachments}"
-            puts "@split_from.class.name.underscore.to_sym: #{@split_from.class.name.underscore.to_sym}"
-            puts "@params[@split_from.class.name.underscore.to_sym]: #{@params[@split_from.class.name.underscore.to_sym]}"
-            puts "@params[@split_from.class.name.underscore.to_sym].values: #{@params[@split_from.class.name.underscore.to_sym].values}"
-            puts "@params[@split_from.class.name.underscore.to_sym].values[0]: #{@params[@split_from.class.name.underscore.to_sym].values[0]}"
-            puts "@params[@split_from.class.name.underscore.to_sym].values[0].count: #{@params[@split_from.class.name.underscore.to_sym].values[0].count}"
-            puts "@from_attr.attachments[-@params[@split_from.class.name.underscore.to_sym].values[0].count..-1]: #{@from_attr.attachments[-@params[@split_from.class.name.underscore.to_sym].values[0].count..-1]}"
-
-            @from_attr.attachments[-@params[@split_from.class.name.underscore.to_sym].values[0].count..-1].each do |new|
+            @from_attr.attachments[-@params[@split_from.class.name.underscore.to_sym][@from_attr.name.to_sym].count..-1].each do |new|
                 puts "THIS ATTACHMENT: #{new.inspect}"
+                puts "THIS BLOB: #{new.blob.inspect}"
 
                 # Initialise the required_columns array
                 required_columns = []
-                puts "required_columns initialised #{required_columns}"
 
                 #Initialise the required attributes hash
                 accepted_data = {}
-                puts "accepted_data initialised: #{accepted_data}"
 
                 # Check the given model for required columns (i.e. those which are marked as 'null: false' in the schema)
                 # For each which is found, add it to the required_column array, unless it's the id, created_at or updated_at columns.
                 @split_into.columns.each do |column|
                     if column.null == false && !(%w(id created_at updated_at).include? column.name)
-                        puts "#{column.name} is a required column in the #{@split_into.name} model"
                         required_columns << column
                     end
                 end
 
                 # Compare the required columns to the provided columns. If any are missing, return an error message
-                puts "Compare the required columns to the provided columns. If any are missing, return an error message"
                 required_columns.each do |column|
                     unless @record_data[column.name.to_sym].present?
                         @errors[:required_column_missing] = "You have not provided data for all required columns (i.e. those which are 'null: false' in you schema)"
@@ -82,7 +50,7 @@ module DocsBox
                     end
 
                     unless types_match(@record_data[column.name.to_sym], column)
-                        @errors[:required_column_type_mismatch] = "The provided data for #{@record_data[column.name.to_sym]} does not match the expected type of #{column.type}"
+                        @errors[:required_column_type_mismatch] = "The provided data for #{column.name} of #{@record_data[column.name.to_sym]} does not match the expected type of #{column.type}"
                         puts "#{@errors}"
                         return @errors
                     end
@@ -95,18 +63,24 @@ module DocsBox
                     end
                 end
 
-                puts "Overriding the name attribute if :use_original_filename is true"
-                # Override the name attribute if :use_original_filename is true
-                if @record_data[:use_original_filename][0]
-                    accepted_data[@record_data[:use_original_filename][1].to_sym] = new.filename
+                # Override the name attribute if :use_original_filename is provided
+                if @record_data[:use_original_filename].present?
+                    accepted_data[@record_data[:use_original_filename].to_sym] = new.blob.filename.to_s
+                end
+
+                # Store the file size attribute if :store_filesize is provided
+                if @record_data[:store_filesize].present?
+                    accepted_data[@record_data[:store_filesize].to_sym] = new.blob.byte_size
                 end
 
                 # Since all required fields are present and of the correct type, we can create an empty new_doc
                 new_doc = @split_into.new()
 
                 # Update the new_doc record with the accepted_data
+                puts "Assigning accepted_data to new_doc..."
+                puts "accepted_data: #{accepted_data}"
                 new_doc.assign_attributes(accepted_data)
-
+                puts "new_doc with assigned accepted_data: #{new_doc.inspect}"
                 # Write the new record to the database
                 if new_doc.save
 
@@ -167,8 +141,12 @@ module DocsBox
         end
 
         def types_match(user_data, column)
-        
-            user_data.class.to_s.underscore.to_sym == column.type
+
+            puts "user_data.class.to_s.underscore.to_sym: #{user_data.class.to_s.underscore.to_sym}"
+            puts "user_data.class: #{user_data.class}"
+            puts "column.type: #{column.type}"
+
+            (user_data.class.to_s.underscore.to_sym == column.type) || ((["fixnum", "bignum", "integer"].include? user_data.class.to_s.downcase) && (["fixnum", "bignum", "integer"].include? column.type.to_s.downcase))
         
         end
     end
