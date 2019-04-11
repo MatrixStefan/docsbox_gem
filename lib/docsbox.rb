@@ -14,16 +14,29 @@ module DocsBox
             if @errors.size > 0
                 @errors[:operation_failed] = "Can't sort with an invalid payload. Blob(s) and attachment(s) are still associated to parent record."
                 return @errors
-            else
-                sort_docs
             end
+            
+            sort_docs
 
         end
 
         private
         def sort_docs
             @errors = {}
-            @from_attr.attachments[-@params[@split_from.class.name.underscore.to_sym][@from_attr.name.to_sym].count..-1].each do |new|
+
+            puts "@params[@split_from.class.name.underscore.to_sym] #{@params[@split_from.class.name.underscore.to_sym]}"
+            puts "@params[@split_from.class.name.underscore.to_sym][@from_attr.name.to_sym] #{@params[@split_from.class.name.underscore.to_sym][@from_attr.name.to_sym]}"
+            puts "@params[@split_from.class.name.underscore.to_sym][@from_attr.name.to_sym].class #{@params[@split_from.class.name.underscore.to_sym][@from_attr.name.to_sym].class}"
+
+            if @params[@split_from.class.name.underscore.to_sym][@from_attr.name.to_sym].class == String
+                from_count = -1
+            else
+                from_count = -@params[@split_from.class.name.underscore.to_sym][@from_attr.name.to_sym].count
+            end
+
+            puts "from_count #{from_count}"
+
+            @from_attr.attachments[from_count..-1].each do |new|
                 puts "THIS ATTACHMENT: #{new.inspect}"
                 puts "THIS BLOB: #{new.blob.inspect}"
 
@@ -74,7 +87,11 @@ module DocsBox
                 end
 
                 # Since all required fields are present and of the correct type, we can create an empty new_doc
-                new_doc = @split_into.new()
+                if has_one
+                    new_doc = @split_from
+                else
+                    new_doc = @split_into.new()
+                end
 
                 # Update the new_doc record with the accepted_data
                 puts "Assigning accepted_data to new_doc..."
@@ -148,6 +165,10 @@ module DocsBox
 
             (user_data.class.to_s.underscore.to_sym == column.type) || ((["fixnum", "bignum", "integer"].include? user_data.class.to_s.downcase) && (["fixnum", "bignum", "integer"].include? column.type.to_s.downcase))
         
+        end
+
+        def has_one
+            @split_from.class.name.to_s == @split_into.to_s
         end
     end
 end
